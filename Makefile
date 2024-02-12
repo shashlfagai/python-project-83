@@ -3,8 +3,7 @@ install:
 build:
 	poetry build
 check:
-	poetry run pytest -vv
-	poetry run flake8 gendiff
+	poetry run flake8 page_analyzer
 dev:
 	poetry run flask --app page_analyzer:app run
 PORT ?= 8000
