@@ -13,9 +13,9 @@ app = Flask(__name__)
 secret_key = secrets.token_hex(32)
 app.secret_key = secret_key
 
+
 @app.route('/')
 def page_analyzer():
-    errors = []
     return render_template('index.html')
 
 
@@ -42,7 +42,10 @@ def analyzing_page():
     cur.execute("SELECT COUNT(*) FROM urls WHERE name = %s", (name,))
     count = cur.fetchone()[0]
     if count == 0:
-        cur.execute('INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id', (name, created_at))
+        cur.execute(
+            'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id',
+            (name, created_at)
+        )
         url_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
@@ -52,7 +55,7 @@ def analyzing_page():
         cur.execute("SELECT id FROM urls WHERE name = %s", (name,))
         url_id = cur.fetchone()[0]
         cur.close()
-        return redirect(url_for('showing_info', id=url_id))    
+        return redirect(url_for('showing_info', id=url_id))
 
 
 @app.route('/urls/<id>')
@@ -65,6 +68,7 @@ def showing_info(id):
     created_at = data[2]
     cur.close()
     return render_template('url.html', id=id, url=url, date=created_at)
+
 
 if __name__ == '__main__':
     app.run()
