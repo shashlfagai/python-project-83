@@ -1,7 +1,5 @@
 install:
 	poetry install
-build:
-	poetry build
 check:
 	poetry run flake8 page_analyzer
 dev:
