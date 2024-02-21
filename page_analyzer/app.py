@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for
 import secrets
 import psycopg2
 from datetime import datetime
@@ -42,7 +42,8 @@ def analyzed_pages():
             count = cur.fetchone()[0]
             if count == 0:
                 cur.execute(
-                    'INSERT INTO urls (name, created_at) VALUES (%s, %s) RETURNING id',
+                    'INSERT INTO urls (name, created_at)\
+                        VALUES (%s, %s) RETURNING id',
                     (name, created_at)
                 )
                 url_id = cur.fetchone()[0]
@@ -54,7 +55,7 @@ def analyzed_pages():
                 url_id = cur.fetchone()[0]
                 cur.close()
             return redirect(url_for('showing_info', id=url_id))
-        except psycopg2.Error as e:
+        except psycopg2.Error:
             # flash('Ошибка при выполнении запроса к базе данных', 'danger')
             return redirect(url_for('page_analyzer'))
 
