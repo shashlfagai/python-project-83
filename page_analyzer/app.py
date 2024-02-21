@@ -21,6 +21,7 @@ def page_analyzer():
 
 @app.route('/urls', methods=['POST', 'GET'])
 def analyzed_pages():
+    conn = psycopg2.connect(DATABASE_URL)
     if request.method == 'GET':
         cur = conn.cursor()
         cur.execute("SELECT id, name FROM urls ORDER BY id DESC")
@@ -34,6 +35,7 @@ def analyzed_pages():
         cur.close()
         return render_template('urls.html', table=table_html)
     else:
+        conn = psycopg2.connect(DATABASE_URL)
         name = request.form.get('url')
         created_at = datetime.now().date()
         cur = conn.cursor()
@@ -55,7 +57,8 @@ def analyzed_pages():
                 url_id = cur.fetchone()[0]
                 cur.close()
             return redirect(url_for('showing_info', id=url_id))
-        except psycopg2.Error:
+        except psycopg2.Error as e:
+            print(e)
             # flash('Ошибка при выполнении запроса к базе данных', 'danger')
             return redirect(url_for('page_analyzer'))
 
