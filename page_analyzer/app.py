@@ -1,5 +1,15 @@
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    get_flashed_messages
+)
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for
+import requests
 import secrets
 import psycopg2
 from datetime import datetime
@@ -17,7 +27,8 @@ app.secret_key = secret_key
 
 @app.route('/')
 def page_analyzer():
-    return render_template('index.html')
+    messages = get_flashed_messages(with_categories=True)
+    return render_template('index.html', messages=messages)
 
 
 @app.route('/urls', methods=['POST', 'GET'])
@@ -26,17 +37,33 @@ def analyzed_pages():
     if request.method == 'GET':
         cur = conn.cursor()
         cur.execute("""
-    SELECT urls.id, urls.name, url_checks.created_at, url_checks.status_code
-    FROM urls
-    LEFT JOIN url_checks ON urls.id = url_checks.url_id
-    ORDER BY urls.id DESC
-""")
+            SELECT
+            urls.id,
+            urls.name,
+            MAX(url_checks.created_at) AS max_created_at,
+            url_checks.status_code
+            FROM
+            urls
+            LEFT JOIN
+            url_checks ON urls.id = url_checks.url_id
+            GROUP BY
+            urls.id, urls.name,
+            url_checks.status_code
+            ORDER BY
+            urls.id DESC
+        """)
         rows = cur.fetchall()
         table_html = ""
         for row in rows:
+            id = row[0]
             for column in row:
                 if column is not None:
-                    table_html += "<td>{}</td>".format(column)
+                    if isinstance(column, str) and column.startswith("http"):
+                        table_html += "<td>\
+                            <a href='/urls/{}'>{}</a>\
+                                </td>".format(id, column)
+                    else:
+                        table_html += "<td>{}</td>".format(column)
                 else:
                     table_html += "<td></td>"
             table_html += "</tr>"
@@ -62,20 +89,21 @@ def analyzed_pages():
                     )
                     url_id = cur.fetchone()[0]
                     conn.commit()
+                    flash('Страница успешно добавлена', 'success')
                     cur.close()
-                    # flash('Страница успешно добавлена', 'success')
                 else:
                     cur.execute("SELECT id FROM urls WHERE name = %s", (name,))
                     url_id = cur.fetchone()[0]
+                    flash('Страница уже существует', 'info')
                     cur.close()
                 return redirect(
                     url_for('showing_info', id=url_id)
                 )
             except psycopg2.Error as e:
                 print(e)
-# flash('Ошибка при выполнении запроса к базе данных', 'danger')
                 return redirect(url_for('page_analyzer'))
         else:
+            flash('Некорректный URL', 'error')
             return redirect(url_for('page_analyzer'))
 
 
@@ -90,10 +118,10 @@ def showing_info(id):
         url = data[1]
         created_at = data[2]
         cur.execute("""
-        SELECT id, status_code, h1, title, description, created_at
-        FROM url_checks
-        WHERE url_id = %s
-        ORDER BY created_at DESC
+            SELECT id, status_code, h1, title, description, created_at
+            FROM url_checks
+            WHERE url_id = %s
+            ORDER BY created_at DESC
         """, (id,))
         rows = cur.fetchall()
         table_html = ""
@@ -105,8 +133,15 @@ def showing_info(id):
                     table_html += "<td></td>"
             table_html += "</tr>"
         cur.close()
+        messages = get_flashed_messages(with_categories=True)
+        print(messages)
         return render_template(
-            'url.html', id=id, url=url, date=created_at, table_check=table_html
+            'url.html',
+            id=id,
+            url=url,
+            date=created_at,
+            table_check=table_html,
+            messages=messages
         )
     else:
         redirect(url_for('check_url', id=id))
@@ -116,13 +151,46 @@ def showing_info(id):
 def check_url(id):
     created_at = datetime.now().date()
     cur = conn.cursor()
-    cur.execute("""
-        INSERT INTO
-        url_checks (url_id, created_at)
-        VALUES (%s, %s)
-    """, (id, created_at))
-    conn.commit()
-    cur.close()
+    cur.execute("SELECT name FROM urls WHERE id = %s", (id,))
+    data = cur.fetchall()[0]
+    url = data[0]
+    try:
+        response = requests.get(url)
+        status_code = response.status_code
+        html_content = response.text
+        soup = BeautifulSoup(html_content, 'html.parser')
+
+        title_tag = soup.find('title')
+        if title_tag:
+            title = title_tag.text
+        else:
+            title = None
+
+        h1_tag = soup.find('h1')
+        if h1_tag:
+            h1 = h1_tag.text
+        else:
+            h1 = None
+
+        description = soup.find('meta', attrs={'name': 'description'})
+        if description:
+            content = description['content']
+        else:
+            content = None
+
+        cur.execute("""
+            INSERT INTO
+            url_checks (
+                url_id, status_code, h1, title, description, created_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (id, status_code, h1, title, content, created_at))
+        conn.commit()
+        cur.close()
+    except requests.exceptions.ConnectionError:
+        flash('Произошла ошибка при проверке', 'error')
+    except requests.exceptions.RequestException:
+        flash('Произошла ошибка при проверке', 'error')
     return redirect(url_for('showing_info', id=id))
 
 

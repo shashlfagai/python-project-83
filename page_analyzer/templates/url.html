@@ -19,6 +19,23 @@
                 </div>
             </nav>
         </header>
+        {% if messages %}
+            {% for category, message in messages %}
+                {% if category == 'success' %}
+                    <div class="alert alert-success" role="alert">
+                        {{ message }}
+                    </div>
+                {% elif category == 'info' %}
+                    <div class="alert alert-info" role="alert">
+                        {{ message }}
+                    </div>
+                {% else %}
+                    <div class="alert alert-danger" role="alert">
+                        {{ message }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
         <main class="flex-grow-1">
             <div class="container-lg mt-3">
                 <h1>Сайт: {{ url }}</h1>
