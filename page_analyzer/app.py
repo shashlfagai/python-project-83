@@ -33,7 +33,7 @@ def page_analyzer():
 
 @app.route('/urls', methods=['POST', 'GET'])
 def analyzed_pages():
-    # conn = psycopg2.connect(DATABASE_URL)
+    conn = psycopg2.connect(DATABASE_URL)
     if request.method == 'GET':
         cur = conn.cursor()
         cur.execute("""
@@ -70,7 +70,7 @@ def analyzed_pages():
         cur.close()
         return render_template('urls.html', table=table_html)
     else:
-        # conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(DATABASE_URL)
         name = request.form.get('url')
         created_at = datetime.now().date()
         cur = conn.cursor()
@@ -110,7 +110,7 @@ def analyzed_pages():
 @app.route('/urls/<id>', methods=['GET', 'POST'])
 def showing_info(id):
     if request.method == 'GET':
-        # conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
         data = cur.fetchall()[0]
@@ -149,6 +149,7 @@ def showing_info(id):
 
 @app.post('/urls/<id>/checks')
 def check_url(id):
+    conn = psycopg2.connect(DATABASE_URL)
     created_at = datetime.now().date()
     cur = conn.cursor()
     cur.execute("SELECT name FROM urls WHERE id = %s", (id,))
