@@ -7,6 +7,7 @@ from flask import (
     flash,
     get_flashed_messages
 )
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import requests
@@ -75,6 +76,8 @@ def analyzed_pages():
         created_at = datetime.now().date()
         cur = conn.cursor()
         if validators.url(name):
+            parse_name = urlparse(name)
+            name = parse_name.scheme + '://' + parse_name.netloc
             try:
                 cur.execute(
                     "SELECT COUNT(*) FROM urls WHERE name = %s",
@@ -134,7 +137,6 @@ def showing_info(id):
             table_html += "</tr>"
         cur.close()
         messages = get_flashed_messages(with_categories=True)
-        print(messages)
         return render_template(
             'url.html',
             id=id,
