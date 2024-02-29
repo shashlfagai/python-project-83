@@ -4,8 +4,7 @@ from flask import (
     request,
     redirect,
     url_for,
-    flash,
-    get_flashed_messages
+    flash
 )
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
