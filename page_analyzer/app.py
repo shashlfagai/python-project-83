@@ -19,7 +19,7 @@ import validators
 load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL')
-conn = psycopg2.connect(DATABASE_URL)
+# conn = psycopg2.connect(DATABASE_URL)
 
 app = Flask(__name__)
 secret_key = secrets.token_hex(32)
@@ -34,8 +34,8 @@ def page_analyzer():
 
 @app.route('/urls', methods=['POST', 'GET'])
 def analyzed_pages():
-    conn = psycopg2.connect(DATABASE_URL)
     if request.method == 'GET':
+        conn = psycopg2.connect(DATABASE_URL)
         cur = conn.cursor()
         cur.execute("""
             SELECT
@@ -69,13 +69,14 @@ def analyzed_pages():
                     table_html += "<td></td>"
             table_html += "</tr>"
         cur.close()
+        conn.close()
         return render_template('urls.html', table=table_html)
     else:
-        conn = psycopg2.connect(DATABASE_URL)
         name = request.form.get('url')
-        created_at = datetime.now().date()
-        cur = conn.cursor()
         if validators.url(name):
+            conn = psycopg2.connect(DATABASE_URL)
+            created_at = datetime.now().date()
+            cur = conn.cursor()
             parse_name = urlparse(name)
             name = parse_name.scheme + '://' + parse_name.netloc
             try:
@@ -99,6 +100,7 @@ def analyzed_pages():
                     url_id = cur.fetchone()[0]
                     flash('Страница уже существует', 'info')
                     cur.close()
+                conn.close()
                 return redirect(
                     url_for('showing_info', id=url_id)
                 )
@@ -137,6 +139,7 @@ def showing_info(id):
             table_html += "</tr>"
         cur.close()
         messages = get_flashed_messages(with_categories=True)
+        conn.close()
         return render_template(
             'url.html',
             id=id,
@@ -194,6 +197,7 @@ def check_url(id):
         flash('Произошла ошибка при проверке', 'error')
     except requests.exceptions.RequestException:
         flash('Произошла ошибка при проверке', 'error')
+    conn.close()
     return redirect(url_for('showing_info', id=id))
 
 
