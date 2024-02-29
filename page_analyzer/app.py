@@ -18,18 +18,17 @@ import os
 import validators
 load_dotenv()
 
-DATABASE_URL = os.getenv('DATABASE_URL')
 # conn = psycopg2.connect(DATABASE_URL)
 
 app = Flask(__name__)
 secret_key = secrets.token_hex(32)
 app.secret_key = secret_key
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 
 @app.route('/')
 def page_analyzer():
-    messages = get_flashed_messages(with_categories=True)
-    return render_template('index.html', messages=messages)
+    return render_template('index.html')
 
 
 @app.route('/urls', methods=['POST', 'GET'])
@@ -93,7 +92,7 @@ def analyzed_pages():
                     )
                     url_id = cur.fetchone()[0]
                     conn.commit()
-                    flash('Страница успешно добавлена', 'success')
+                    flash('Страница успешно добавлена', category='success')
                     cur.close()
                 else:
                     cur.execute("SELECT id FROM urls WHERE name = %s", (name,))
@@ -138,7 +137,6 @@ def showing_info(id):
                     table_html += "<td></td>"
             table_html += "</tr>"
         cur.close()
-        # messages = get_flashed_messages(with_categories=True)
         conn.close()
         return render_template(
             'url.html',

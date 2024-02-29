@@ -19,15 +19,11 @@
                 </div>
             </nav>
         </header>
-        {% if messages %}
-            {% for category, message in messages %}
-                {% if category == 'error' %}
-                    <div class="alert alert-danger" role="alert">
-                        {{ message }}
-                    </div>
-                {% endif %}
-            {% endfor %}
-        {% endif %}
+        {% for category, message in get_flashed_messages(True) %}
+            <div class="alert alert-danger" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
         <main class="flex-grow-1">
             <div class="container-lg mt-3">
                 <div class="row">
