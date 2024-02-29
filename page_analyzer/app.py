@@ -138,15 +138,14 @@ def showing_info(id):
                     table_html += "<td></td>"
             table_html += "</tr>"
         cur.close()
-        messages = get_flashed_messages(with_categories=True)
+        # messages = get_flashed_messages(with_categories=True)
         conn.close()
         return render_template(
             'url.html',
             id=id,
             url=url,
             date=created_at,
-            table_check=table_html,
-            messages=messages
+            table_check=table_html
         )
     else:
         redirect(url_for('check_url', id=id))

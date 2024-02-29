@@ -19,8 +19,8 @@
                 </div>
             </nav>
         </header>
-        {% if messages %}
-            {% for category, message in messages %}
+        <!-- {% if get_flashed_messages(with_categories=True) %} -->
+            {% for category, message in get_flashed_messages(True) %}
                 {% if category == 'success' %}
                     <div class="alert alert-success" role="alert">
                         {{ message }}
@@ -35,7 +35,7 @@
                     </div>
                 {% endif %}
             {% endfor %}
-        {% endif %}
+        <!-- {% endif %} -->
         <main class="flex-grow-1">
             <div class="container-lg mt-3">
                 <h1>Сайт: {{ url }}</h1>
