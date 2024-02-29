@@ -15,8 +15,9 @@ python-dotenv = "^1.0.1"
 validators = "^0.22.0"
 requests = "^2.31.0"
 beautifulsoup4 = "^4.12.3"
-hexlet-code = { version = "0.1.0", python = "^3.11" }
 
+[tool.poetry.packages]
+include = "page_analyzer"
 
 [build-system]
 requires = ["poetry-core"]
