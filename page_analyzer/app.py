@@ -84,6 +84,7 @@ def analyzed_pages():
                 )
                 count = cur.fetchone()[0]
                 if count == 0:
+                    flash('Страница успешно добавлена', category='success')
                     cur.execute(
                         'INSERT INTO urls (name, created_at)\
                             VALUES (%s, %s) RETURNING id',
@@ -91,12 +92,11 @@ def analyzed_pages():
                     )
                     url_id = cur.fetchone()[0]
                     conn.commit()
-                    flash('Страница успешно добавлена', category='success')
                     cur.close()
                 else:
+                    flash('Страница уже существует', 'info')
                     cur.execute("SELECT id FROM urls WHERE name = %s", (name,))
                     url_id = cur.fetchone()[0]
-                    flash('Страница уже существует', 'info')
                     cur.close()
                 conn.close()
                 return redirect(
