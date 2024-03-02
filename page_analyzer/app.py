@@ -1,11 +1,4 @@
-from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    flash
-)
+from flask import Flask, render_template, request, redirect, url_for, flash
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -15,14 +8,16 @@ import psycopg2
 from datetime import datetime
 import os
 import validators
+
 load_dotenv()
 
-# conn = psycopg2.connect(DATABASE_URL)
-
 app = Flask(__name__)
-secret_key = secrets.token_hex(32)
-app.secret_key = secret_key
+app.secret_key = secrets.token_hex(32)
 DATABASE_URL = os.getenv('DATABASE_URL')
+
+
+def connect_to_database():
+    return psycopg2.connect(DATABASE_URL)
 
 
 @app.route('/')
@@ -33,7 +28,7 @@ def page_analyzer():
 @app.route('/urls', methods=['POST', 'GET'])
 def analyzed_pages():
     if request.method == 'GET':
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = connect_to_database()
         cur = conn.cursor()
         cur.execute("""
             SELECT
@@ -72,7 +67,7 @@ def analyzed_pages():
     else:
         name = request.form.get('url')
         if validators.url(name):
-            conn = psycopg2.connect(DATABASE_URL)
+            conn = connect_to_database()
             created_at = datetime.now().date()
             cur = conn.cursor()
             parse_name = urlparse(name)
@@ -84,7 +79,8 @@ def analyzed_pages():
                 )
                 count = cur.fetchone()[0]
                 if count == 0:
-                    flash('Страница успешно добавлена', category='success')
+                    message = 'Страница успешно добавлена'
+                    category = 'success'
                     cur.execute(
                         'INSERT INTO urls (name, created_at)\
                             VALUES (%s, %s) RETURNING id',
@@ -94,26 +90,29 @@ def analyzed_pages():
                     conn.commit()
                     cur.close()
                 else:
-                    flash('Страница уже существует', 'info')
+                    message = 'Страница уже существует'
+                    category = 'info'
                     cur.execute("SELECT id FROM urls WHERE name = %s", (name,))
                     url_id = cur.fetchone()[0]
                     cur.close()
                 conn.close()
+                flash(message, category)
                 return redirect(
                     url_for('showing_info', id=url_id)
                 )
             except psycopg2.Error as e:
+                flash('Произошла ошибка при добавлении страницы', 'danger')
                 print(e)
                 return redirect(url_for('page_analyzer'))
         else:
-            flash('Некорректный URL', 'error')
+            flash('Некорректный URL', 'danger')
             return redirect(url_for('page_analyzer'))
 
 
 @app.route('/urls/<id>', methods=['GET', 'POST'])
 def showing_info(id):
     if request.method == 'GET':
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = connect_to_database()
         cur = conn.cursor()
         cur.execute("SELECT * FROM urls WHERE id = %s", (id,))
         data = cur.fetchall()[0]
@@ -150,7 +149,7 @@ def showing_info(id):
 
 @app.post('/urls/<id>/checks')
 def check_url(id):
-    conn = psycopg2.connect(DATABASE_URL)
+    conn = connect_to_database()
     created_at = datetime.now().date()
     cur = conn.cursor()
     cur.execute("SELECT name FROM urls WHERE id = %s", (id,))
@@ -163,22 +162,13 @@ def check_url(id):
         soup = BeautifulSoup(html_content, 'html.parser')
 
         title_tag = soup.find('title')
-        if title_tag:
-            title = title_tag.text
-        else:
-            title = None
+        title = title_tag.text if title_tag else None
 
         h1_tag = soup.find('h1')
-        if h1_tag:
-            h1 = h1_tag.text
-        else:
-            h1 = None
+        h1 = h1_tag.text if h1_tag else None
 
         description = soup.find('meta', attrs={'name': 'description'})
-        if description:
-            content = description['content']
-        else:
-            content = None
+        content = description['content'] if description else None
 
         cur.execute("""
             INSERT INTO
@@ -189,10 +179,11 @@ def check_url(id):
         """, (id, status_code, h1, title, content, created_at))
         conn.commit()
         cur.close()
-    except requests.exceptions.ConnectionError:
-        flash('Произошла ошибка при проверке', 'error')
-    except requests.exceptions.RequestException:
-        flash('Произошла ошибка при проверке', 'error')
+    except (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.RequestException
+    ):
+        flash('Произошла ошибка при проверке', 'danger')
     conn.close()
     return redirect(url_for('showing_info', id=id))
 
